@@ -19,7 +19,7 @@
 
 ## ✨ Características Principales
 * **Métricas Claras:** Implementación y explicación matemática y práctica del **Error Absoluto Medio (MAE)**.
-* **Validación Cruzada vs. Validación Simple:** Demostración del error crítico de validar "dentro de la muestra" (*in-sample*) y cómo solucionarlo con división de entrenamiento/prueba (*train-test split*).
+* **Validación fuera de muestra:** Demostración del error crítico de validar "dentro de la muestra" (*in-sample*) y cómo solucionarlo con división de entrenamiento/prueba (*train-test split*).
 * **Búsqueda del Punto Óptimo:** Control de la complejidad del modelo ajustando el parámetro `max_leaf_nodes` para evitar el ruido y capturar patrones reales.
 * **Visualización de Datos:** Gráficos dinámicos con `seaborn` y `matplotlib` para mapear el MAE frente a la cantidad de nodos.
 
@@ -58,8 +58,8 @@ graph TD
     H --> I["Calcular Error Absoluto Medio (MAE)"]
     F --> I
     I --> J["Evaluar max_leaf_nodes (Tuning)"]
-    J --> K{"¿MAE Óptimo? (500 nodos)"}
-    K -->|Sí| L["Modelo Final Listo"]
+    J --> K{"¿Menor MAE entre candidatos?"}
+    K -->|Sí| L["Evaluar en test independiente"]
     K -->|No| G
 ```
 
@@ -104,7 +104,7 @@ Esta sección aborda la pregunta fundamental: **¿Qué tan preciso es nuestro mo
 * **Métrica MAE:** Se introduce el Error Absoluto Medio, definido formalmente como:
   $$\text{MAE} = \frac{1}{n} \sum_{i=1}^{n} |y_i - \hat{y}_i|$$
   *En términos sencillos: "En promedio, nuestras predicciones están equivocadas por X cantidad de dólares".*
-* **La trampa del error "In-Sample":** Se demuestra que si evaluamos el modelo con los mismos datos con los que entrenó, el error será artificialmente bajo (~$500), pero fallará estrepitosamente con datos reales.
+* **La trampa del error "In-Sample":** Se demuestra que si evaluamos el modelo con los mismos datos con los que entrenó, el MAE fue 434.72 dentro de la muestra y 265,345.35 en validación: evaluar con los datos de entrenamiento subestima el error fuera de muestra.
 * **Solución:** Se implementa `train_test_split` de Scikit-Learn para reservar un **25%** de los datos exclusivamente para validación, asegurando una evaluación honesta y realista.
 
 ### Lección 2: Underfitting y Overfitting
@@ -127,19 +127,22 @@ Al realizar el análisis de validación y optimización de hiperparámetros sobr
 * `Lattitude` (Latitud)
 * `Longtitude` (Longitud)
 
-Se obtuvieron los siguientes valores de **MAE**:
+Resultados reproducidos el 21 de octubre de 2026 con ejecución asistida por IA. Se ejecutaron 15 celdas de código sin errores; las salidas están guardadas en los notebooks. Se fijó `random_state=0` en la división y los árboles.
 
-| Nodos Permitidos (`max_leaf_nodes`) | MAE (Dólares) | Estado del Modelo |
-|:-----------------------------------:|:-------------:|:-----------------:|
-| 5                                   | $347,380      | 🔴 Subajuste (Underfitting) |
-| 50                                  | $258,171      | 🟡 Acercándose al óptimo |
-| **500**                             | **$243,495**  | 🟢 **Punto Óptimo (Best Fit)** |
-| 600                                 | $243,908      | 🟡 Inicio de Sobreajuste |
-| 800                                 | $244,929      | 🟡 Sobreajuste leve |
-| 5000                                | $254,432      | 🔴 Sobreajuste (Overfitting) |
+De 13,580 filas originales quedaron 6,196 completas: 4,647 para entrenamiento y 1,549 para validación. El MAE del árbol sin límite fue 265,345.35, frente a 483,397.47 de una referencia que siempre predice la mediana de entrenamiento.
 
-> [!IMPORTANT]
-> **Conclusión:** Permitir un máximo de **500 nodos de hojas** ofrece el rendimiento óptimo, reduciendo el error absoluto medio de predicción al mínimo antes de que el sobreajuste empiece a deteriorar la capacidad de generalización del modelo.
+| Máximo de hojas | MAE de validación (redondeado) |
+| --- | ---: |
+| 5 | 347,380 |
+| 50 | 258,171 |
+| 500 | 243,495 |
+| 600 | 243,951 |
+| **700** | **242,955** |
+| 800 | 244,042 |
+| 1000 | 247,378 |
+| 5000 | 255,575 |
+
+**Conclusión:** 700 hojas obtuvo el menor MAE entre los candidatos probados en esta partición. Esto no prueba un óptimo universal ni autoriza el despliegue. Tras elegir hiperparámetros se necesita una prueba independiente; el conjunto usado para elegirlos ya no ofrece una estimación final imparcial. Eliminar todas las filas incompletas también puede introducir sesgo.
 
 ---
 
